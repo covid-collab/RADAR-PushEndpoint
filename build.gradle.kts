@@ -58,8 +58,6 @@ dependencies {
 
     implementation(project(path = ":deprecated-javax", configuration = "shadow"))
 
-    runtimeOnly("javax.ws.rs:javax.ws.rs-api:2.1.1")
-
     implementation("org.radarbase:oauth-client-util:${project.property("radarOauthClientVersion")}")
 
     implementation("org.slf4j:slf4j-api:${project.property("slf4jVersion")}")
@@ -74,7 +72,7 @@ dependencies {
     runtimeOnly("org.glassfish.grizzly:grizzly-framework-monitoring:$grizzlyVersion")
     runtimeOnly("org.glassfish.grizzly:grizzly-http-monitoring:$grizzlyVersion")
     runtimeOnly("org.glassfish.grizzly:grizzly-http-server-monitoring:$grizzlyVersion")
-    implementation("ch.qos.logback:logback-classic:${project.property("logbackVersion")}")
+    runtimeOnly("ch.qos.logback:logback-classic:${project.property("logbackVersion")}")
 
     val jedisVersion: String by project
     implementation("redis.clients:jedis:$jedisVersion")
@@ -83,9 +81,6 @@ dependencies {
     val okhttp3Version: String by project
     val radarSchemasVersion: String by project
     implementation("org.radarbase:radar-schemas-commons:$radarSchemasVersion")
-
-    val firebaseAdminSDKVersion: String by project
-    implementation("com.google.firebase:firebase-admin:$firebaseAdminSDKVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
     testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:[2.2,3.0)")
