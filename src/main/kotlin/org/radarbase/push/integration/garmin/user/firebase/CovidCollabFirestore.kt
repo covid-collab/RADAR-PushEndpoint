@@ -6,9 +6,9 @@ import jakarta.ws.rs.core.Context
 import org.radarbase.gateway.Config
 import org.radarbase.push.integration.common.user.User
 import org.radarbase.push.integration.garmin.user.firebase.FirebaseGarminAuthDetails.Companion.OAUTH_KEY
-import org.radarbase.push.integration.garmin.user.firebase.FirebaseUserRepository.Companion.getDocument
-import org.radarbase.push.integration.garmin.user.firebase.FirebaseUserRepository.Companion.getFirestore
-import org.radarbase.push.integration.garmin.user.firebase.FirebaseUserRepository.Companion.initFirebase
+import org.radarbase.push.integration.garmin.user.firebase.FirebaseUtil.getDocument
+import org.radarbase.push.integration.garmin.user.firebase.FirebaseUtil.getFirestore
+import org.radarbase.push.integration.garmin.user.firebase.FirebaseUtil.initFirebase
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -60,11 +60,13 @@ class CovidCollabFirestore(
     }
 
     protected fun createUser(
-        userSnapshot: DocumentSnapshot, garminSnapshot: DocumentSnapshot): FirebaseUser? {
+        userSnapshot: DocumentSnapshot, garminSnapshot: DocumentSnapshot
+    ): FirebaseUser? {
         if (!garminSnapshot.contains(OAUTH_KEY)) {
             logger.warn(
                 "The ${OAUTH_KEY} key for user {} in the fitbit" +
-                    " document is not present. Skipping...", garminSnapshot.id)
+                    " document is not present. Skipping...", garminSnapshot.id
+            )
             return null
         }
 
@@ -82,7 +84,8 @@ class CovidCollabFirestore(
         if (authDetails?.oauth2Credentials == null) {
             logger.warn(
                 "The auth details for user {} in the database are not valid. Skipping...",
-                garminSnapshot.id)
+                garminSnapshot.id
+            )
             return null
         }
 
@@ -98,7 +101,8 @@ class CovidCollabFirestore(
     private fun updateUser(garminDocumentSnapshot: DocumentSnapshot) {
         try {
             val user: FirebaseUser? = createUser(
-                getDocument(garminDocumentSnapshot.id, userCollection), garminDocumentSnapshot)
+                getDocument(garminDocumentSnapshot.id, userCollection), garminDocumentSnapshot
+            )
             logger.debug("User to be updated: {}", user)
             if (checkValidUser(user)) {
                 val user1: FirebaseUser? = cachedUsers.put(user?.id ?: return, user)
@@ -112,13 +116,16 @@ class CovidCollabFirestore(
                 }
                 hasPendingUpdates = true
             } else {
-                logger.info("User {} cannot be processed due to constraints",
-                    user?.id ?: garminDocumentSnapshot.id)
+                logger.info(
+                    "User {} cannot be processed due to constraints",
+                    user?.id ?: garminDocumentSnapshot.id
+                )
                 removeUser(garminDocumentSnapshot)
             }
         } catch (e: IOException) {
             logger.error(
-                "The update of the user {} was not possible.", garminDocumentSnapshot.id, e)
+                "The update of the user {} was not possible.", garminDocumentSnapshot.id, e
+            )
         }
     }
 
@@ -156,7 +163,8 @@ class CovidCollabFirestore(
             return
         }
         logger.info(
-            "OnEvent Called: {}, {}", snapshots?.documentChanges?.size, snapshots?.documents?.size)
+            "OnEvent Called: {}, {}", snapshots?.documentChanges?.size, snapshots?.documents?.size
+        )
         var countAdded = 0
         for (dc in snapshots?.documentChanges ?: return) {
             try {
@@ -174,7 +182,8 @@ class CovidCollabFirestore(
                 logger.warn(
                     "Could not process document change event for document: {}",
                     dc.document.id,
-                    exc)
+                    exc
+                )
             }
         }
         logger.info("Added/Updated {} Users", countAdded)
@@ -186,7 +195,8 @@ class CovidCollabFirestore(
         } else {
             throw IOException(
                 "No pending updates available." +
-                    " Try calling this method only when updates are available")
+                    " Try calling this method only when updates are available"
+            )
         }
     }
 

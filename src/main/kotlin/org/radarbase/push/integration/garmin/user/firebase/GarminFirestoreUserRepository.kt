@@ -13,6 +13,8 @@ import org.radarbase.push.integration.common.auth.DelegatedAuthValidator.Compani
 import org.radarbase.push.integration.common.auth.SignRequestParams
 import org.radarbase.push.integration.common.user.User
 import org.radarbase.push.integration.garmin.auth.OauthSignature
+import org.radarbase.push.integration.garmin.user.GarminUserRepository
+import org.radarbase.push.integration.garmin.user.firebase.FirebaseUtil.deleteDocument
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.Math.floor
@@ -20,10 +22,10 @@ import java.time.Instant
 import java.util.stream.Stream
 
 class GarminFirestoreUserRepository(
-    @Context config: Config,
+    @Context val config: Config,
     @Context val httpClient: OkHttpClient,
     @Named(GARMIN_QUALIFIER) val covidCollabFirestore: CovidCollabFirestore,
-) : FirebaseUserRepository(config) {
+) : GarminUserRepository(config) {
 
     override fun getUserAccessTokenSecret(user: User): String =
         covidCollabFirestore.getUser(user.id)
@@ -31,8 +33,10 @@ class GarminFirestoreUserRepository(
             ?.oauth2Credentials
             ?.oauthTokenSecrets
             ?.first()
-            ?: throw HttpUnauthorizedException("invalid_access_token_secret", "The access token " +
-                "secret for user ${user.id} could not be found.")
+            ?: throw HttpUnauthorizedException(
+                "invalid_access_token_secret", "The access token " +
+                    "secret for user ${user.id} could not be found."
+            )
 
     override fun getSignedRequest(user: User, payload: SignRequestParams): SignRequestParams =
         signRequest(getAccessToken(user), getUserAccessTokenSecret(user), payload)
@@ -59,8 +63,10 @@ class GarminFirestoreUserRepository(
     override fun getAccessToken(user: User): String =
         covidCollabFirestore.getUser(user.id)
             ?.garminAuthDetails?.oauth2Credentials?.oauthTokens?.first() ?: throw
-        HttpUnauthorizedException("invalid_access_token", "The access token for user ${user.id} " +
-            "could not be found.")
+        HttpUnauthorizedException(
+            "invalid_access_token", "The access token for user ${user.id} " +
+                "could not be found."
+        )
 
     override fun hasPendingUpdates(): Boolean = covidCollabFirestore.hasPendingUpdates
 
@@ -69,7 +75,10 @@ class GarminFirestoreUserRepository(
 
     fun revokeToken(token: String, accessTokenSecret: String): Boolean {
 
-        if (token.isEmpty()) throw HttpBadRequestException("token-empty", "Token cannot be null or empty")
+        if (token.isEmpty()) throw HttpBadRequestException(
+            "token-empty",
+            "Token cannot be null or empty"
+        )
         val req = createRequest(
             "DELETE",
             GARMIN_DEREGISTER_ENDPOINT,
@@ -82,7 +91,8 @@ class GarminFirestoreUserRepository(
                 200, 204 -> true
                 400, 401, 403 -> false
                 else -> throw HttpBadGatewayException(
-                    "Cannot connect to ${GARMIN_DEREGISTER_ENDPOINT}: HTTP status ${response.code}")
+                    "Cannot connect to ${GARMIN_DEREGISTER_ENDPOINT}: HTTP status ${response.code}"
+                )
             }
         }
     }
