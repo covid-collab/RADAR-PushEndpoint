@@ -21,19 +21,26 @@ data class FirebaseUser(
     override val externalId: String
         get() = garminAuthDetails.userInfo?.userId ?: ""
     override val startDate: Instant
-        get() = Instant.ofEpochSecond(garminAuthDetails.startDate
-            ?: throw IllegalStateException("The start date cannot be null"))
+        get() = Instant.ofEpochSecond(
+            garminAuthDetails.startDate
+                ?: throw IllegalStateException("The start date cannot be null")
+        )
     override val endDate: Instant
-        get() = Instant.ofEpochSecond(garminAuthDetails.endDate
-            ?: throw IllegalStateException("The end date cannot be null"))
+        get() = Instant.ofEpochSecond(
+            garminAuthDetails.endDate
+                ?: throw IllegalStateException("The end date cannot be null")
+        )
+
+    // This is used as stopping point for backfill requests
     override val createdAt: Instant
         get() = garminAuthDetails.oauth2Credentials?.datetime?.let { Instant.ofEpochSecond(it) }
-            ?: Instant.MIN
+            ?: if (Instant.now() < endDate) Instant.now() else endDate
     override val humanReadableUserId: String?
         get() = null
     override val serviceUserId: String
-        get() = garminAuthDetails.userInfo?.userId ?: throw IllegalStateException("The user Id " +
-            "cannot be null.")
+        get() = garminAuthDetails.userInfo?.userId ?: throw IllegalStateException(
+            "The user Id cannot be null."
+        )
     override val version: String?
         get() = garminAuthDetails.version
     override val isAuthorized: Boolean
@@ -46,4 +53,5 @@ data class FirebaseUser(
 @IgnoreExtraProperties
 data class FirebaseUserDetails(
     @get:PropertyName("project_id") @set:PropertyName("project_id")
-    var projectId: String = "radar-firebase-default-project")
+    var projectId: String = "radar-firebase-default-project"
+)

@@ -1,5 +1,6 @@
 package org.radarbase.push.integration.garmin.service
 
+import jakarta.ws.rs.core.Context
 import okhttp3.OkHttpClient
 import org.glassfish.jersey.server.monitoring.ApplicationEvent
 import org.glassfish.jersey.server.monitoring.ApplicationEvent.Type.DESTROY_FINISHED
@@ -21,7 +22,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
-import jakarta.ws.rs.core.Context
 
 /**
  * The backfill service should be used to collect historic data. This will send requests to garmin's
@@ -104,10 +104,17 @@ class BackfillService(
         logger.debug("Making Request: {}", req.request)
         try {
             httpClient.newCall(req.request).execute().use { response ->
-                if (response.isSuccessful) {
-                    requestGenerator.requestSuccessful(req, response)
-                } else {
-                    requestGenerator.requestFailed(req, response)
+                when {
+                    response.isSuccessful -> requestGenerator.requestSuccessful(req, response)
+                    response.code == 429 -> {
+                        requestGenerator.requestFailed(req, response)
+                        logger.info(
+                            "Too many requests for user ${req.user.id}." +
+                                " Backing off for ${BACKOFF_TIME_MS / 1000}s...."
+                        )
+                        Thread.sleep(BACKOFF_TIME_MS)
+                    }
+                    else -> requestGenerator.requestFailed(req, response)
                 }
             }
         } catch (ex: Throwable) {
@@ -117,6 +124,7 @@ class BackfillService(
 
     companion object {
         private val logger = LoggerFactory.getLogger(BackfillService::class.java)
-        private const val WAIT_TIME_MS = 10000L
+        private const val WAIT_TIME_MS = 10_000L
+        private const val BACKOFF_TIME_MS = 100_000L
     }
 }
