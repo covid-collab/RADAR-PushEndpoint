@@ -43,8 +43,8 @@ class GarminFirestoreUserRepository(
 
     override fun deregisterUser(serviceUserId: String, userAccessToken: String) {
         // Send deregister to Garmin and Delete user from garmin collection in firebase if exists
-        covidCollabFirestore.getDocumentByExternalId(serviceUserId)?.let { garminDocument ->
-            deleteDocument(garminDocument.reference)
+        covidCollabFirestore.getDocumentReferenceByServiceId(serviceUserId)?.let { garminDocument ->
+            deleteDocument(garminDocument)
         }
         if (revokeToken(userAccessToken, "")) {
             logger.info("Successfully deregistered user $serviceUserId.")
@@ -62,11 +62,11 @@ class GarminFirestoreUserRepository(
 
     override fun getAccessToken(user: User): String =
         covidCollabFirestore.getUser(user.id)
-            ?.garminAuthDetails?.oauth2Credentials?.oauthTokens?.first() ?: throw
-        HttpUnauthorizedException(
-            "invalid_access_token", "The access token for user ${user.id} " +
-                "could not be found."
-        )
+            ?.garminAuthDetails?.oauth2Credentials?.oauthTokens?.first()
+            ?: throw HttpUnauthorizedException(
+                "invalid_access_token",
+                "The access token for user ${user.id} could not be found."
+            )
 
     override fun hasPendingUpdates(): Boolean = covidCollabFirestore.hasPendingUpdates
 
@@ -97,7 +97,7 @@ class GarminFirestoreUserRepository(
         }
     }
 
-    private fun signRequest(accessToken: String, refreshToken: String, payload: SignRequestParams):
+    private fun signRequest(accessToken: String, tokenSecret: String, payload: SignRequestParams):
         SignRequestParams {
 
         val signedParams = payload.parameters.toMutableMap()
@@ -108,7 +108,7 @@ class GarminFirestoreUserRepository(
             signedParams.toSortedMap(),
             payload.method,
             config.pushIntegration.garmin.consumerSecret,
-            refreshToken,
+            tokenSecret,
         ).getEncodedSignature()
 
         return SignRequestParams(payload.url, payload.method, signedParams)

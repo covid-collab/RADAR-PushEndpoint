@@ -46,9 +46,9 @@ class CovidCollabFirestore(
         }
     }
 
-    fun getDocumentByExternalId(externalId: String): DocumentSnapshot? {
-        val uuid = getUsers().find { it.serviceUserId == externalId }?.id ?: return null
-        return getDocument(uuid, garminCollection)
+    fun getDocumentReferenceByServiceId(serviceId: String): DocumentReference? {
+        val uuid = getUsers().find { it.serviceUserId == serviceId }?.id ?: return null
+        return garminCollection.document(uuid)
     }
 
     @Throws(IOException::class)
@@ -64,7 +64,7 @@ class CovidCollabFirestore(
     ): FirebaseUser? {
         if (!garminSnapshot.contains(OAUTH_KEY)) {
             logger.warn(
-                "The ${OAUTH_KEY} key for user {} in the fitbit" +
+                "The $OAUTH_KEY key for user {} in the garmin" +
                     " document is not present. Skipping...", garminSnapshot.id
             )
             return null
