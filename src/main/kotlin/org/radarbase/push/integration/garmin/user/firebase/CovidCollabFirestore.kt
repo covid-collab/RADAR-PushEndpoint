@@ -129,16 +129,6 @@ class CovidCollabFirestore(
         }
     }
 
-    /**
-     * We add the user based on the following conditions -
-     * 1) The user is not null
-     * 2) The user has not auth errors signified by the auth_result key in firebase. We accept 409
-     * code too since it is just a concurrent request conflict and does not effect the validity of
-     * the tokens.
-     *
-     * @param user The user to check for validity
-     * @return true if user is valid, false otherwise.
-     */
     private fun checkValidUser(user: FirebaseUser?): Boolean {
         return (user != null
             && user.garminAuthDetails.endDate != null
