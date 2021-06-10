@@ -114,6 +114,7 @@ class BackfillService(
                         )
                         Thread.sleep(BACKOFF_TIME_MS)
                     }
+                    response.code == 409 -> logger.info("A duplicate request was made. Ignoring...")
                     else -> requestGenerator.requestFailed(req, response)
                 }
             }
