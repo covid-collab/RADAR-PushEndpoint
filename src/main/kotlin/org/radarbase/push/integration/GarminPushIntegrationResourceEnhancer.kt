@@ -17,12 +17,15 @@ import org.radarbase.push.integration.garmin.factory.GarminUserTreeMapFactory
 import org.radarbase.push.integration.garmin.service.BackfillService
 import org.radarbase.push.integration.garmin.service.GarminHealthApiService
 import org.radarbase.push.integration.garmin.user.GarminUserRepository
+import org.radarbase.push.integration.garmin.user.firebase.CovidCollabFirestore
+import org.radarbase.push.integration.garmin.user.firebase.GarminFirestoreUserRepository
 
 
 class GarminPushIntegrationResourceEnhancer(private val config: Config) :
     JerseyResourceEnhancer {
 
     override fun ResourceConfig.enhance() {
+
         packages(
             "org.radarbase.push.integration.garmin.resource",
             "org.radarbase.push.integration.common.filter"
@@ -37,6 +40,15 @@ class GarminPushIntegrationResourceEnhancer(private val config: Config) :
         }
 
     override fun AbstractBinder.enhance() {
+
+        if (config.pushIntegration.garmin.userRepository
+            == GarminFirestoreUserRepository::class.java) {
+            val ccFirestore = CovidCollabFirestore(config)
+            bind(ccFirestore)
+                .to(CovidCollabFirestore::class.java)
+                .named(GARMIN_QUALIFIER)
+                .`in`(Singleton::class.java)
+        }
 
         bind(config.pushIntegration.garmin.userRepository)
             .to(GarminUserRepository::class.java)

@@ -106,7 +106,7 @@ class GarminRequestGenerator(
     }
 
     override fun requestFailed(request: RestRequest, response: Response) {
-        logger.warn("Request Failed: {}, {}", request, response)
+        logger.warn("Request Failed: {}, {}, {}", request, response, response.body?.string())
     }
 
     companion object {
