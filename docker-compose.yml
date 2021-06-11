@@ -2,67 +2,71 @@
 version: '2.1'
 
 services:
-  #---------------------------------------------------------------------------#
-  # Zookeeper Cluster                                                         #
-  #---------------------------------------------------------------------------#
-  zookeeper-1:
-    image: confluentinc/cp-zookeeper:${KAFKA_CONFLUENT_VERSION}
-    environment:
-      ZOOKEEPER_SERVER_ID: 1
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_SERVERS: zookeeper-1:2888:3888
+    #---------------------------------------------------------------------------#
+    # Zookeeper Cluster                                                         #
+    #---------------------------------------------------------------------------#
+    zookeeper-1:
+        image: confluentinc/cp-zookeeper:${KAFKA_CONFLUENT_VERSION}
+        environment:
+            ZOOKEEPER_SERVER_ID: 1
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_SERVERS: zookeeper-1:2888:3888
 
-  #---------------------------------------------------------------------------#
-  # Kafka Cluster                                                             #
-  #---------------------------------------------------------------------------#
-  kafka-1:
-    image: confluentinc/cp-kafka:${KAFKA_CONFLUENT_VERSION}
-    depends_on:
-      - zookeeper-1
-    ports:
-    -   9093:9093
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:9092, EXTERNAL://localhost:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT, EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_COMPRESSION_TYPE: lz4
-      KAFKA_CONFLUENT_SUPPORT_METRICS_ENABLE: "false"
-      KAFKA_TRANSITION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSITION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    #---------------------------------------------------------------------------#
+    # Kafka Cluster                                                             #
+    #---------------------------------------------------------------------------#
+    kafka-1:
+        image: confluentinc/cp-kafka:${KAFKA_CONFLUENT_VERSION}
+        depends_on:
+            - zookeeper-1
+        ports:
+            - 9093:9093
+        environment:
+            KAFKA_BROKER_ID: 1
+            KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181
+            KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:9092, EXTERNAL://localhost:9093
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT, EXTERNAL:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+            KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+            KAFKA_COMPRESSION_TYPE: lz4
+            KAFKA_CONFLUENT_SUPPORT_METRICS_ENABLE: "false"
+            KAFKA_TRANSITION_STATE_LOG_MIN_ISR: 1
+            KAFKA_TRANSITION_STATE_LOG_REPLICATION_FACTOR: 1
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-  #---------------------------------------------------------------------------#
-  # Schema Registry                                                           #
-  #---------------------------------------------------------------------------#
-  schema-registry-1:
-    image: confluentinc/cp-schema-registry:${KAFKA_CONFLUENT_VERSION}
-    depends_on:
-      - kafka-1
-    ports:
-      - "127.0.0.1:8081:8081"
-    environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-1:9092
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry-1
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-      SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 1
+    #---------------------------------------------------------------------------#
+    # Schema Registry                                                           #
+    #---------------------------------------------------------------------------#
+    schema-registry-1:
+        image: confluentinc/cp-schema-registry:${KAFKA_CONFLUENT_VERSION}
+        depends_on:
+            - kafka-1
+        ports:
+            - "127.0.0.1:8081:8081"
+        environment:
+            SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-1:9092
+            SCHEMA_REGISTRY_HOST_NAME: schema-registry-1
+            SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+            SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 1
 
-  push-endpoint:
-      build: .
-      image: radarbase/radar-push-endpoint:SNAPSHOT
-      depends_on:
-        - kafka-1
-        - schema-registry-1
-      ports:
-        - "127.0.0.1:8090:8090"
-      volumes:
-        - ./gateway.yml:/etc/radar-gateway/gateway.yml
+    push-endpoint:
+        build: .
+        image: radarbase/radar-push-endpoint:SNAPSHOT
+        depends_on:
+            - kafka-1
+            - schema-registry-1
+        ports:
+            - "127.0.0.1:8090:8090"
+        volumes:
+            - ./gateway.yml:/etc/radar-gateway/gateway.yml
+            - ${GOOGLE_CREDENTIALS_FILE_PATH}:/opt/google_credentials.json
+        environment:
+            GOOGLE_APPLICATION_CREDENTIALS: /opt/google_credentials.json
 
-  redis:
-      image: bitnami/redis
-      ports:
-          - "6379:6379"
-      environment:
-          ALLOW_EMPTY_PASSWORD: "yes"
+
+    redis:
+        image: bitnami/redis
+        ports:
+            - "6379:6379"
+        environment:
+            ALLOW_EMPTY_PASSWORD: "yes"

@@ -52,6 +52,8 @@ data class GarminConfig(
     val userRepositoryClientId: String = "radar_pushendpoint",
     val userRepositoryClientSecret: String = "",
     val userRepositoryTokenUrl: String = "http://localhost:8080/token/",
+    val userRepositoryFirestoreGarminCollection: String = "garmin",
+    val userRepositoryFirestoreUserCollection: String = "users",
     val dailiesTopicName: String = "push_garmin_daily_summary",
     val activitiesTopicName: String = "push_garmin_activity_summary",
     val activityDetailsTopicName: String = "push_garmin_activity_detail",
@@ -75,7 +77,7 @@ data class GarminConfig(
         if (enabled) {
             check(GarminUserRepository::class.java.isAssignableFrom(userRepository)) {
                 "$userRepositoryClass is not valid. Please specify a class that is a subclass of" +
-                        " `org.radarbase.push.integration.garmin.user.GarminUserRepository`"
+                    " `org.radarbase.push.integration.garmin.user.GarminUserRepository`"
             }
         }
     }
