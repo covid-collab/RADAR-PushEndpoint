@@ -1,5 +1,7 @@
 package org.radarbase.push.integration.garmin.service
 
+
+import jakarta.inject.Named
 import jakarta.ws.rs.core.Context
 import okhttp3.OkHttpClient
 import org.glassfish.jersey.server.monitoring.ApplicationEvent
@@ -21,7 +23,6 @@ import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
-import javax.inject.Named
 
 /**
  * The backfill service should be used to collect historic data. This will send requests to garmin's
