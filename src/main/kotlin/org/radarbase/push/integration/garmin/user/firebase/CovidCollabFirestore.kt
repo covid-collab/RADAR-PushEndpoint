@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
-class CovidCollabFirestore(
+open class CovidCollabFirestore(
     @Context private val config: Config,
 ) : EventListener<QuerySnapshot> {
     var hasPendingUpdates = true
@@ -39,10 +39,9 @@ class CovidCollabFirestore(
     @Throws(IOException::class)
     fun getUser(key: String): FirebaseUser? {
         return try {
-            cachedUsers[key]
+            cachedUsers[key] ?: createUser(key)
         } catch (ex: NullPointerException) {
-            logger.warn("The requested user was not found in cache. Creating a new one.")
-            createUser(key)
+            throw IOException("The requested key was null. Please provide a valid key.")
         }
     }
 
@@ -105,15 +104,12 @@ class CovidCollabFirestore(
             )
             logger.debug("User to be updated: {}", user)
             if (checkValidUser(user)) {
-                val user1: FirebaseUser? = cachedUsers.put(user?.id ?: return, user)
-                if (user1 == null) {
-                    logger.debug("Created new User: {}", user.id)
-                } else {
+                cachedUsers.put(user?.id ?: return, user)?.let { existingUser ->
                     with(logger) {
-                        debug("Updated existing user: {}", user1)
+                        debug("Updated existing user: {}", existingUser)
                         debug("Updated user is: {}", user)
                     }
-                }
+                } ?: logger.debug("Created new User: {}", user.id)
                 hasPendingUpdates = true
             } else {
                 logger.info(
@@ -130,21 +126,19 @@ class CovidCollabFirestore(
     }
 
     private fun checkValidUser(user: FirebaseUser?): Boolean {
-        return (user != null
+        return user != null
             && user.garminAuthDetails.endDate != null
             && user.garminAuthDetails.startDate != null
             && user.garminAuthDetails.userInfo?.userId != null
             && !user.garminAuthDetails.oauth2Credentials?.oauthTokens.isNullOrEmpty()
-            && user.garminAuthDetails.userInfo?.errorMessage.isNullOrEmpty())
+            && user.garminAuthDetails.userInfo?.errorMessage.isNullOrEmpty()
     }
 
-    private fun removeUser(documentSnapshot: DocumentSnapshot) {
-        val user: FirebaseUser? = cachedUsers.remove(documentSnapshot.id)
-        if (user != null) {
+    private fun removeUser(documentSnapshot: DocumentSnapshot) =
+        cachedUsers.remove(documentSnapshot.id)?.let { user ->
             logger.info("Removed User: {}:", user)
             hasPendingUpdates = true
         }
-    }
 
 
     override fun onEvent(snapshots: QuerySnapshot?, e: FirestoreException?) {
@@ -191,7 +185,6 @@ class CovidCollabFirestore(
     }
 
     companion object {
-
         private val logger: Logger = LoggerFactory.getLogger(CovidCollabFirestore::class.java)
     }
 }
