@@ -177,7 +177,7 @@ open class CovidCollabFirestore(
         if (hasPendingUpdates) {
             hasPendingUpdates = false
         } else {
-            throw IOException(
+            logger.info(
                 "No pending updates available." +
                     " Try calling this method only when updates are available"
             )
