@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import io.confluent.common.config.ConfigException
+import org.apache.kafka.common.config.ConfigException
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -17,8 +17,8 @@ import org.radarbase.jersey.exception.HttpBadRequestException
 import org.radarbase.push.integration.common.auth.SignRequestParams
 import org.radarbase.push.integration.common.user.User
 import org.radarbase.push.integration.common.user.Users
-import org.radarcns.exception.TokenException
-import org.radarcns.oauth.OAuth2Client
+import org.radarbase.exception.TokenException
+import org.radarbase.oauth.OAuth2Client
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.URL
@@ -27,8 +27,8 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
-import javax.ws.rs.NotAuthorizedException
-import javax.ws.rs.core.Context
+import jakarta.ws.rs.NotAuthorizedException
+import jakarta.ws.rs.core.Context
 
 @Suppress("UNCHECKED_CAST")
 class GarminServiceUserRepository(
@@ -89,7 +89,8 @@ class GarminServiceUserRepository(
 
     @Throws(IOException::class, NotAuthorizedException::class)
     override fun getAccessToken(user: User): String {
-        val credentials: OAuth1UserCredentials = cachedCredentials[user.id] ?: requestUserCredentials(user)
+        val credentials: OAuth1UserCredentials =
+            cachedCredentials[user.id] ?: requestUserCredentials(user)
         return credentials.accessToken
     }
 
@@ -107,7 +108,7 @@ class GarminServiceUserRepository(
 
     override fun deregisterUser(serviceUserId: String, userAccessToken: String) {
         val request =
-            requestFor("source-clients/garmin/authorization/$serviceUserId?accessToken=$userAccessToken")
+            requestFor("source-clients/$GARMIN_SOURCE/authorization/$serviceUserId?accessToken=$userAccessToken")
                 .method("DELETE", EMPTY_BODY).build()
         return makeRequest(request, null)
     }
@@ -124,7 +125,7 @@ class GarminServiceUserRepository(
     @Throws(IOException::class)
     override fun applyPendingUpdates() {
         logger.info("Requesting user information from webservice")
-        val request = requestFor("users?source-type=Garmin").build()
+        val request = requestFor("users?source-type=$GARMIN_SOURCE").build()
         timedCachedUsers = makeRequest<Users>(request, USER_LIST_READER).users
 
         nextFetch = Instant.now().plus(FETCH_THRESHOLD)
@@ -185,6 +186,7 @@ class GarminServiceUserRepository(
     }
 
     companion object {
+        private const val GARMIN_SOURCE = "Garmin"
         private val JSON_FACTORY = JsonFactory()
         private val JSON_READER: ObjectReader =
             ObjectMapper(JSON_FACTORY).registerModule(JavaTimeModule()).reader()
