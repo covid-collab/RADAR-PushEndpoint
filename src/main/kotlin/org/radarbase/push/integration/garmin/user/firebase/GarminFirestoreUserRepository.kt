@@ -42,14 +42,34 @@ class GarminFirestoreUserRepository(
         signRequest(getAccessToken(user), getUserAccessTokenSecret(user), payload)
 
     override fun deregisterUser(serviceUserId: String, userAccessToken: String) {
-        // Send deregister to Garmin and Delete user from garmin collection in firebase if exists
-        covidCollabFirestore.getDocumentReferenceByServiceId(serviceUserId)?.let { garminDocument ->
-            deleteDocument(garminDocument)
+        val accessTokenSecret = try {
+            this.getUserAccessTokenSecret(this.findByExternalId(serviceUserId))
+        } catch (ex: NoSuchElementException) {
+            logger.info(
+                "User not found with id ${serviceUserId}, trying to deregister without " +
+                    "access token secret."
+            )
+            ""
+        } catch (ex: HttpUnauthorizedException) {
+            logger.info(
+                "Access token Secret not found for id ${serviceUserId}, trying to deregister " +
+                    "without access token secret."
+            )
+            ""
         }
-        if (revokeToken(userAccessToken, "")) {
+
+        // Send deregister to Garmin and Delete user from garmin collection in firebase if exists
+        if (revokeToken(userAccessToken, accessTokenSecret)) {
             logger.info("Successfully deregistered user $serviceUserId.")
+
+            // only delete the document on successful deregistration
+            covidCollabFirestore.getDocumentReferenceByServiceId(serviceUserId)
+                ?.let { garminDocument -> deleteDocument(garminDocument) }
         } else {
-            logger.warn("Not able to deregister user $serviceUserId.")
+            logger.error(
+                "Not able to deregister user. Please contact Garmin Support Team (connect-support@developer.garmin.com)" +
+                    "to remove the user with access token: $userAccessToken and user ID: $serviceUserId"
+            )
         }
     }
 
@@ -73,7 +93,7 @@ class GarminFirestoreUserRepository(
     override fun applyPendingUpdates() = covidCollabFirestore.applyUpdates()
 
 
-    fun revokeToken(token: String, accessTokenSecret: String): Boolean {
+    fun revokeToken(token: String, accessTokenSecret: String?): Boolean {
 
         if (token.isEmpty()) throw HttpBadRequestException(
             "token-empty",
@@ -89,7 +109,13 @@ class GarminFirestoreUserRepository(
         return httpClient.newCall(req).execute().use { response ->
             when (response.code) {
                 200, 204 -> true
-                400, 401, 403 -> false
+                400, 401, 403 -> {
+                    logger.warn(
+                        "Error while revoking token. Code: ${response.code}, " +
+                            "Body: ${response.body?.string()}"
+                    )
+                    false
+                }
                 else -> throw HttpBadGatewayException(
                     "Cannot connect to ${GARMIN_DEREGISTER_ENDPOINT}: HTTP status ${response.code}"
                 )
@@ -133,7 +159,7 @@ class GarminFirestoreUserRepository(
         method: String,
         url: String,
         accessToken: String,
-        accessTokenSecret: String,
+        accessTokenSecret: String?,
         tokenVerifier: String? = null
     ):
         Request {
