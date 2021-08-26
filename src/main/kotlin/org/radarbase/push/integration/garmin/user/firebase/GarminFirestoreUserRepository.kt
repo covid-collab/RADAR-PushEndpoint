@@ -67,8 +67,8 @@ class GarminFirestoreUserRepository(
                 ?.let { garminDocument -> deleteDocument(garminDocument) }
         } else {
             logger.error(
-                "Not able to deregister user. Please contact Garmin Support Team to remove " +
-                    "the user with access token: $userAccessToken and user ID: $serviceUserId"
+                "Not able to deregister user. Please contact Garmin Support Team (connect-support@developer.garmin.com)" +
+                    "to remove the user with access token: $userAccessToken and user ID: $serviceUserId"
             )
         }
     }
