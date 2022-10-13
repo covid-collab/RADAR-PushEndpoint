@@ -71,6 +71,11 @@ abstract class GarminRoute(
         return requests.toMutableList()
     }
 
+    override fun maxBackfillPeriod(): Duration {
+        // 2 years default. Activity API routes will override this with 5 years
+        return Duration.ofDays(365 * 2)
+    }
+
     abstract fun subPath(): String
 
     companion object {

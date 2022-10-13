@@ -1,6 +1,7 @@
 package org.radarbase.push.integration.garmin.backfill
 
 import org.radarbase.push.integration.common.user.User
+import java.time.Duration
 import java.time.Instant
 
 interface Route {
@@ -16,4 +17,6 @@ interface Route {
      * This is how it would appear in the offsets
      */
     override fun toString(): String
+
+    fun maxBackfillPeriod(): Duration
 }
