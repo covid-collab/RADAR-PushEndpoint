@@ -24,6 +24,8 @@ class GarminRequestGenerator(
 ) :
     RequestGenerator {
 
+    private val userNextRequest: MutableMap<String, Instant> = mutableMapOf()
+
     private val routes: List<Route> = listOf(
         GarminActivitiesRoute(
             config.pushIntegration.garmin.consumerKey,
@@ -77,7 +79,7 @@ class GarminRequestGenerator(
         get() = Instant.now() < nextRequestTime
 
     override fun requests(user: User, max: Int): Sequence<RestRequest> {
-        return if (!shouldBackoff) {
+        return if (!shouldBackoff && user.ready()) {
             routes.map { route ->
                 val offsets: Offsets? = offsetPersistenceFactory.read(user.versionedId)
                 val backfillLimit = Instant.now().minus(route.maxBackfillPeriod())
@@ -94,7 +96,10 @@ class GarminRequestGenerator(
 
                 if (startOffset <= backfillLimit) {
                     // the start date is before the backfill limits
-                    logger.warn("Backfill limit exceeded for $user and $route. Resetting to earliest allowed start offset.")
+                    logger.warn(
+                        "Backfill limit exceeded for $user and $route." +
+                            " Resetting to earliest allowed start offset."
+                    )
                     startOffset = backfillLimit.plus(Duration.ofDays(2))
                 }
 
@@ -121,18 +126,34 @@ class GarminRequestGenerator(
         when (response.code) {
             429 -> {
                 logger.info("Too many requests, rate limit reached. Backing off...")
-                nextRequestTime = Instant.now().plusMillis(BACK_OFF_TIME_MS)
+                nextRequestTime = Instant.now().plus(BACK_OFF_TIME)
             }
             409 -> {
                 logger.info("A duplicate request was made. Marking successful...")
                 requestSuccessful(request, response)
             }
+            412 -> {
+                logger.warn(
+                    "User ${request.user} does not have correct permissions/scopes enabled. " +
+                        "Please enable in garmin connect. User backing off..."
+                )
+                userNextRequest[request.user.versionedId] = Instant.now().plus(USER_BACK_OFF_TIME)
+            }
             else -> logger.warn("Request Failed: {}, {}", request, response)
+        }
+    }
+
+    private fun User.ready(): Boolean {
+        return if (versionedId in userNextRequest) {
+            Instant.now() > userNextRequest[versionedId]
+        } else {
+            true
         }
     }
 
     companion object {
         private val logger = LoggerFactory.getLogger(GarminRequestGenerator::class.java)
-        private const val BACK_OFF_TIME_MS = 60_000L
+        private val BACK_OFF_TIME = Duration.ofMinutes(1L)
+        private val USER_BACK_OFF_TIME = Duration.ofDays(1)
     }
 }
