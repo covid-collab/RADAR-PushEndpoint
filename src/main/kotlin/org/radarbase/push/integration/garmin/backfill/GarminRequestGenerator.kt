@@ -126,7 +126,7 @@ class GarminRequestGenerator(
         when (response.code) {
             429 -> {
                 logger.info("Too many requests, rate limit reached. Backing off...")
-                nextRequestTime = Instant.now().plusMillis(BACK_OFF_TIME_MS)
+                nextRequestTime = Instant.now().plus(BACK_OFF_TIME)
             }
             409 -> {
                 logger.info("A duplicate request was made. Marking successful...")
@@ -137,7 +137,7 @@ class GarminRequestGenerator(
                     "User ${request.user} does not have correct permissions/scopes enabled. " +
                         "Please enable in garmin connect. User backing off..."
                 )
-                userNextRequest[request.user.versionedId] = Instant.now().plusMillis(USER_BACK_OFF_TIME_MS)
+                userNextRequest[request.user.versionedId] = Instant.now().plus(USER_BACK_OFF_TIME)
             }
             else -> logger.warn("Request Failed: {}, {}", request, response)
         }
@@ -145,7 +145,7 @@ class GarminRequestGenerator(
 
 
     private fun isUserReady(user: User): Boolean {
-        return if (user.versionedId in userNextRequest.keys) {
+        return if (user.versionedId in userNextRequest) {
             Instant.now() > userNextRequest[user.versionedId]
         } else {
             true
@@ -154,7 +154,7 @@ class GarminRequestGenerator(
 
     companion object {
         private val logger = LoggerFactory.getLogger(GarminRequestGenerator::class.java)
-        private const val BACK_OFF_TIME_MS = 60_000L
-        private const val USER_BACK_OFF_TIME_MS = 24 * 60 * 60 * 1000L // 1 Day
+        private val BACK_OFF_TIME = Duration.ofMinutes(1L)
+        private val USER_BACK_OFF_TIME = Duration.ofDays(1)
     }
 }
