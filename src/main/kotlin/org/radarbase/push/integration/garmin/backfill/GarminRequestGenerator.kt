@@ -79,7 +79,7 @@ class GarminRequestGenerator(
         get() = Instant.now() < nextRequestTime
 
     override fun requests(user: User, max: Int): Sequence<RestRequest> {
-        return if (!shouldBackoff && isUserReady(user)) {
+        return if (!shouldBackoff && user.ready()) {
             routes.map { route ->
                 val offsets: Offsets? = offsetPersistenceFactory.read(user.versionedId)
                 val backfillLimit = Instant.now().minus(route.maxBackfillPeriod())
@@ -143,10 +143,9 @@ class GarminRequestGenerator(
         }
     }
 
-
-    private fun isUserReady(user: User): Boolean {
-        return if (user.versionedId in userNextRequest) {
-            Instant.now() > userNextRequest[user.versionedId]
+    private fun User.ready(): Boolean {
+        return if (versionedId in userNextRequest) {
+            Instant.now() > userNextRequest[versionedId]
         } else {
             true
         }
