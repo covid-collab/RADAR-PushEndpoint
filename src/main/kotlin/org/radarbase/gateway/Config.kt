@@ -88,6 +88,7 @@ data class BackfillConfig(
     val redis: RedisConfig = RedisConfig(),
     val maxThreads: Int = 4,
     val defaultEndDate: Instant = Instant.MAX,
+    val scheduleRateMinutes: Long = 5,
     val userBackfill: List<UserBackfillConfig> = emptyList()
 )
 

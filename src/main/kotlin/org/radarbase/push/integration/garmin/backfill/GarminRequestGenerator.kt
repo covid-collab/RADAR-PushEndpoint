@@ -154,6 +154,6 @@ class GarminRequestGenerator(
     companion object {
         private val logger = LoggerFactory.getLogger(GarminRequestGenerator::class.java)
         private val BACK_OFF_TIME = Duration.ofMinutes(1L)
-        private val USER_BACK_OFF_TIME = Duration.ofDays(1)
+        private val USER_BACK_OFF_TIME = Duration.ofDays(1L)
     }
 }
