@@ -66,7 +66,10 @@ class BackfillService(
     private fun start() {
         logger.info("Application Initialisation completed. Starting Backfill service...")
 
-        executorService.scheduleAtFixedRate(::iterateUsers, 1, 5, TimeUnit.MINUTES)
+        executorService.scheduleAtFixedRate(
+            ::iterateUsers, 1,
+            config.pushIntegration.garmin.backfill.scheduleRateMinutes, TimeUnit.MINUTES
+        )
     }
 
     private fun stop() {
