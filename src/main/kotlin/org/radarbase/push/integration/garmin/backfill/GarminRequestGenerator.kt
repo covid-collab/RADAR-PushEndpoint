@@ -80,6 +80,7 @@ class GarminRequestGenerator(
 
     override fun requests(user: User, max: Int): Sequence<RestRequest> {
         return if (!shouldBackoff && user.ready()) {
+            val maxReq = max / routes.size
             routes.map { route ->
                 val offsets: Offsets? = offsetPersistenceFactory.read(user.versionedId)
                 val backfillLimit = Instant.now().minus(route.maxBackfillPeriod())
@@ -106,7 +107,8 @@ class GarminRequestGenerator(
                 val endDate = userRepository.getBackfillEndDate(user)
                 if (endDate <= startOffset) return@map emptyList()
                 val endTime = (startOffset + defaultQueryRange).coerceAtMost(endDate)
-                route.generateRequests(user, startOffset, endTime, max / routes.size)
+                logger.debug("Generating $maxReq requests for user $user with range($startOffset, $endTime).")
+                route.generateRequests(user, startOffset, endTime, maxReq)
             }.asSequence().flatten().takeWhile { !shouldBackoff }
         } else emptySequence()
     }

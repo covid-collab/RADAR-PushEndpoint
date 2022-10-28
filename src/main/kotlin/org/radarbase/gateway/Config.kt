@@ -88,8 +88,10 @@ data class BackfillConfig(
     val redis: RedisConfig = RedisConfig(),
     val maxThreads: Int = 4,
     val defaultEndDate: Instant = Instant.MAX,
+    val defaultStartDate: Instant? = null,
     val scheduleRateMinutes: Long = 5,
-    val userBackfill: List<UserBackfillConfig> = emptyList()
+    val userBackfill: List<UserBackfillConfig> = emptyList(),
+    val projectBackfill: List<ProjectBackfillConfig> = emptyList(),
 )
 
 data class RedisConfig(
@@ -99,8 +101,14 @@ data class RedisConfig(
 
 data class UserBackfillConfig(
     val userId: String,
-    val startDate: Instant,
-    val endDate: Instant
+    val startDate: Instant? = null,
+    val endDate: Instant? = null,
+)
+
+data class ProjectBackfillConfig(
+    val projectId: String,
+    val startDate: Instant? = null,
+    val endDate: Instant? = null,
 )
 
 data class GatewayServerConfig(

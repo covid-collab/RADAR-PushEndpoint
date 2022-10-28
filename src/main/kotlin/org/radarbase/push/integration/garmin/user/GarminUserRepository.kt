@@ -46,13 +46,21 @@ abstract class GarminUserRepository(private val config: Config) : UserRepository
     fun getBackfillStartDate(user: User): Instant {
         return config.pushIntegration.garmin.backfill.userBackfill.find {
             it.userId == user.versionedId
-        }?.startDate ?: user.startDate
+        }?.startDate
+            ?: config.pushIntegration.garmin.backfill.projectBackfill.find {
+                it.projectId == user.projectId
+            }?.startDate
+            ?: config.pushIntegration.garmin.backfill.defaultStartDate
+            ?: user.startDate
     }
 
     fun getBackfillEndDate(user: User): Instant {
         return config.pushIntegration.garmin.backfill.userBackfill.find {
             it.userId == user.versionedId
         }?.endDate?.takeIf { it <= user.endDate }
+            ?: config.pushIntegration.garmin.backfill.projectBackfill.find {
+                it.projectId == user.projectId
+            }?.endDate?.takeIf { it <= user.endDate }
             ?: config.pushIntegration.garmin.backfill.defaultEndDate.takeIf { it < user.endDate }
             ?: user.createdAt
     }
