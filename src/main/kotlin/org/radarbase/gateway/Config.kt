@@ -92,6 +92,7 @@ data class BackfillConfig(
     val scheduleRateMinutes: Long = 5,
     val userBackfill: List<UserBackfillConfig> = emptyList(),
     val projectBackfill: List<ProjectBackfillConfig> = emptyList(),
+    val includeProjects: List<String> = emptyList()
 )
 
 data class RedisConfig(

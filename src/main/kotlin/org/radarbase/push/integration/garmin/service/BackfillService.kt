@@ -91,15 +91,19 @@ class BackfillService(
             futures.clear()
             logger.info("Making Garmin Backfill requests...")
             try {
-                userRepository.stream().forEach { user ->
-
-                    futures.add(requestExecutorService.submit {
-                        remoteLockManager.tryRunLocked(user.versionedId) {
-                            requestGenerator.requests(user, requestsPerUserPerIteration)
-                                .forEach { req -> makeRequest(req) }
-                        }
-                    })
-                }
+                userRepository.stream()
+                    .filter { user ->
+                        config.pushIntegration.garmin.backfill.includeProjects.isEmpty()
+                            || user.projectId in config.pushIntegration.garmin.backfill.includeProjects
+                    }
+                    .forEach { user ->
+                        futures.add(requestExecutorService.submit {
+                            remoteLockManager.tryRunLocked(user.versionedId) {
+                                requestGenerator.requests(user, requestsPerUserPerIteration)
+                                    .forEach { req -> makeRequest(req) }
+                            }
+                        })
+                    }
             } catch (exc: IOException) {
                 logger.warn("I/O Exception while making Backfill requests.", exc)
             }
