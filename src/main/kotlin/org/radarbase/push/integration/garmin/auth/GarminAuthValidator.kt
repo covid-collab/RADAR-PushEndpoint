@@ -45,7 +45,7 @@ class GarminAuthValidator(
                 tree[tree.fieldNames().next()].groupBy { node ->
                     node[USER_ID_KEY].asText()
                 }.filter { (userId, _) ->
-                    !ignoreUsers.containsKey(userId)
+                    isUserValid(userId)
                 }.filter { (userId, userData) ->
                     val accessToken = userData[0][USER_ACCESS_TOKEN_KEY].asText()
                     if (checkIsAuthorised(userId, accessToken)) true else {
@@ -89,20 +89,24 @@ class GarminAuthValidator(
         }
     }
 
-    private fun checkIsAuthorised(userId: String, accessToken: String, retry: Boolean = true):
-        Boolean {
-
-        ignoreUsers[userId]?.let {
+    private fun isUserValid(userId: String): Boolean {
+        return ignoreUsers[userId]?.let {
             if (it.plus(ignoreUsersValidity) < Instant.now()) {
                 ignoreUsers.remove(userId)
+                true
             } else {
                 logger.warn(
                     "invalid_user: The user {} could not be found in the " +
                         "user repository. Ignoring user for {} and proceeding.", userId, ignoreUsersValidity.toString()
                 )
-                return true
+                false
             }
-        }
+        } ?: true
+    }
+
+    private fun checkIsAuthorised(userId: String, accessToken: String, retry: Boolean = true):
+        Boolean {
+
 
         val user = try {
             userRepository.findByExternalId(userId)
