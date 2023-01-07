@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Named
 import jakarta.ws.rs.container.ContainerRequestContext
 import jakarta.ws.rs.core.Context
+import org.radarbase.gateway.Config
 import org.radarbase.jersey.auth.Auth
 import org.radarbase.jersey.auth.AuthValidator
 import org.radarbase.jersey.auth.disabled.DisabledAuth
@@ -13,16 +14,22 @@ import org.radarbase.push.integration.common.auth.DelegatedAuthValidator.Compani
 import org.radarbase.push.integration.common.user.User
 import org.radarbase.push.integration.garmin.user.GarminUserRepository
 import org.slf4j.LoggerFactory
+import java.time.Duration
 import java.time.Instant
 
 
 class GarminAuthValidator(
     @Context private val objectMapper: ObjectMapper,
-    @Named(GARMIN_QUALIFIER) private val userRepository: GarminUserRepository
+    @Named(GARMIN_QUALIFIER) private val userRepository: GarminUserRepository,
+    @Context private val config: Config
 ) :
     AuthValidator {
 
     private var nextRetry: Instant = Instant.MIN
+
+    private val ignoreUsers: MutableMap<String, Instant> = mutableMapOf()
+    private val ignoreUsersValidity: Duration =
+        Duration.ofHours(config.pushIntegration.garmin.auth.ignoreUsersValidityHours)
 
     override fun verify(token: String, request: ContainerRequestContext): Auth {
         return if (token.isBlank()) {
@@ -37,10 +44,13 @@ class GarminAuthValidator(
                 // group by user ID since request can contain data from multiple users
                 tree[tree.fieldNames().next()].groupBy { node ->
                     node[USER_ID_KEY].asText()
+                }.filter { (userId, _) ->
+                    !ignoreUsers.containsKey(userId)
                 }.filter { (userId, userData) ->
                     val accessToken = userData[0][USER_ACCESS_TOKEN_KEY].asText()
                     if (checkIsAuthorised(userId, accessToken)) true else {
                         isAnyUnauthorised = true
+                        ignoreUsers[userId] = Instant.now()
                         userRepository.deregisterUser(userId, accessToken)
                         false
                     }
@@ -81,6 +91,19 @@ class GarminAuthValidator(
 
     private fun checkIsAuthorised(userId: String, accessToken: String, retry: Boolean = true):
         Boolean {
+
+        ignoreUsers[userId]?.let {
+            if (it.plus(ignoreUsersValidity) < Instant.now()) {
+                ignoreUsers.remove(userId)
+            } else {
+                logger.warn(
+                    "invalid_user: The user {} could not be found in the " +
+                        "user repository. Ignoring user for {} and proceeding.", userId, ignoreUsersValidity.toString()
+                )
+                return true
+            }
+        }
+
         val user = try {
             userRepository.findByExternalId(userId)
         } catch (exc: NoSuchElementException) {

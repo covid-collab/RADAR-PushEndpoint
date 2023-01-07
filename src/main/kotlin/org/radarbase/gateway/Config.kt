@@ -69,8 +69,10 @@ data class GarminConfig(
     val bodyBatterySampleTopicName: String = "push_garmin_body_battery_sample",
     val heartRateSampleConverter: String = "push_garmin_heart_rate_sample",
     val sleepLevelTopicName: String = "push_garmin_sleep_level",
-    val stressLevelTopicName: String = "push_garmin_stress_level"
+    val stressLevelTopicName: String = "push_garmin_stress_level",
+    val auth: GarminAuth = GarminAuth(),
 ) {
+
     val userRepository: Class<*> = Class.forName(userRepositoryClass)
 
     fun validate() {
@@ -110,6 +112,10 @@ data class ProjectBackfillConfig(
     val projectId: String,
     val startDate: Instant? = null,
     val endDate: Instant? = null,
+)
+
+data class GarminAuth(
+    val ignoreUsersValidityHours: Long = 12,
 )
 
 data class GatewayServerConfig(
